@@ -18,10 +18,12 @@ export const formatLocalDate = (dateStr: string) => {
 };
 
 function decode(base64: string) {
-  const binaryString = atob(base64);
-  const bytes = new Uint8Array(binaryString.length);
-  for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
-  return bytes;
+  try {
+    const binaryString = atob(base64);
+    const bytes = new Uint8Array(binaryString.length);
+    for (let i = 0; i < binaryString.length; i++) bytes[i] = binaryString.charCodeAt(i);
+    return bytes;
+  } catch(e) { return new Uint8Array(0); }
 }
 
 async function decodeAudioData(data: Uint8Array, ctx: AudioContext, sampleRate: number, numChannels: number): Promise<AudioBuffer> {
@@ -78,32 +80,38 @@ const App: React.FC = () => {
   }, [tasks]);
 
   useEffect(() => {
-    const savedTasks = localStorage.getItem('voz_tasks');
-    const savedTx = localStorage.getItem('voz_tx');
-    const savedNotified = localStorage.getItem('voz_notified');
-    const savedTheme = localStorage.getItem('voz_theme') as ThemeColor;
-    
-    if (savedTasks) setTasks(JSON.parse(savedTasks));
-    if (savedTx) setTransactions(JSON.parse(savedTx));
-    if (savedTheme) setTheme(savedTheme);
-    if (savedNotified) {
-      const parsed = JSON.parse(savedNotified);
-      setNotifiedTasks(parsed);
-      notifiedTasksRef.current = parsed;
+    try {
+      const savedTasks = localStorage.getItem('voz_tasks');
+      const savedTx = localStorage.getItem('voz_tx');
+      const savedNotified = localStorage.getItem('voz_notified');
+      const savedTheme = localStorage.getItem('voz_theme') as ThemeColor;
+      
+      if (savedTasks) setTasks(JSON.parse(savedTasks));
+      if (savedTx) setTransactions(JSON.parse(savedTx));
+      if (savedTheme) setTheme(savedTheme);
+      if (savedNotified) {
+        const parsed = JSON.parse(savedNotified);
+        setNotifiedTasks(parsed);
+        notifiedTasksRef.current = parsed;
+      }
+    } catch (e) {
+      console.error("Erro ao carregar dados do localStorage", e);
     }
 
-    const syncChannel = new BroadcastChannel('alba-sync');
-    syncChannel.onmessage = (event) => {
-      if (event.data.type === 'TASK_ACTION') {
-        const { action, taskId } = event.data;
-        if (action === 'complete') toggleTask(taskId);
-        else {
-          setActiveAlerts(prev => prev.filter(t => t.id !== taskId));
-          markAsNotified(taskId);
+    if (typeof BroadcastChannel !== 'undefined') {
+      const syncChannel = new BroadcastChannel('alba-sync');
+      syncChannel.onmessage = (event) => {
+        if (event.data.type === 'TASK_ACTION') {
+          const { action, taskId } = event.data;
+          if (action === 'complete') toggleTask(taskId);
+          else {
+            setActiveAlerts(prev => prev.filter(t => t.id !== taskId));
+            markAsNotified(taskId);
+          }
         }
-      }
-    };
-    return () => syncChannel.close();
+      };
+      return () => syncChannel.close();
+    }
   }, []);
 
   useEffect(() => {
@@ -125,7 +133,10 @@ const App: React.FC = () => {
     try {
       const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
       if (audioCtx.state === 'suspended') await audioCtx.resume();
-      const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+      const apiKey = process.env.API_KEY;
+      if (!apiKey) return;
+
+      const ai = new GoogleGenAI({ apiKey });
       const response = await ai.models.generateContent({
         model: "gemini-2.5-flash-preview-tts",
         contents: [{ parts: [{ text }] }],
@@ -210,7 +221,6 @@ const App: React.FC = () => {
           if (task.dueDate === todayLocal) {
             if (task.dueTime) {
               if (currentTimeStr >= task.dueTime) {
-                console.log(`Alarm Triggered: ${task.title} at ${task.dueTime}`);
                 triggerAlarm(task);
               }
             } else if (currentTimeStr >= "08:00") {
@@ -264,6 +274,8 @@ const App: React.FC = () => {
     setActiveAlerts(prev => prev.filter(t => t.id !== id));
   };
 
+  const bgBtnClass = `w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all active:scale-90 relative ${isWakeWordListening ? `bg-${theme}-600` : 'bg-slate-400'}`;
+
   return (
     <div className={`flex flex-col min-h-screen bg-slate-50 pb-24 lg:pb-0 lg:pl-64 ${focusSession.isActive ? 'overflow-hidden' : ''}`}>
       {!focusSession.isActive && (
@@ -293,13 +305,13 @@ const App: React.FC = () => {
       {activeAlerts.length > 0 && !focusSession.isActive && <AlarmOverlay theme={theme} alerts={activeAlerts} onDismiss={(id) => { setActiveAlerts(prev => prev.filter(t => t.id !== id)); markAsNotified(id); }} onComplete={toggleTask} />}
       {!focusSession.isActive && (
         <div className="fixed bottom-24 right-4 z-50 lg:bottom-8 lg:right-8">
-          <button onClick={() => setIsVoiceActive(true)} className={`w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all active:scale-90 relative ${isWakeWordListening ? `bg-${theme}-600` : 'bg-slate-400'}`}>
+          <button onClick={() => setIsVoiceActive(true)} className={bgBtnClass}>
             {isWakeWordListening && <div className={`absolute inset-0 rounded-full bg-${theme}-400 animate-ping opacity-30`}></div>}
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
           </button>
         </div>
       )}
-      {isVoiceActive && <VoiceAssistant theme={theme} onClose={() => setIsVoiceActive(false)} tasks={tasks} onAddTask={(t) => addTask(t, true)} onDeleteTask={deleteTask} onAddTransaction={(tx) => addTransaction(tx, true)} onNavigate={setView} onStartFocus={(tid, dur) => setFocusSession({isActive: true, taskId: tid, durationMinutes: dur || 25})} />}
+      {isVoiceActive && <VoiceAssistant theme={theme} onClose={() => setIsVoiceActive(false)} tasks={tasks} onAddTask={(t) => addTask(t, true)} onDeleteTask={deleteTask} onStartFocus={(tid, dur) => setFocusSession({isActive: true, taskId: tid, durationMinutes: dur || 25})} onAddTransaction={(tx) => addTransaction(tx, true)} onNavigate={setView} />}
     </div>
   );
 };
