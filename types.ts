@@ -19,6 +19,8 @@ export interface Transaction {
 
 export type ViewMode = 'dashboard' | 'agenda' | 'finances';
 
+export type ThemeColor = 'indigo' | 'emerald' | 'rose' | 'amber' | 'violet' | 'slate';
+
 export interface FocusSession {
   isActive: boolean;
   taskId?: string;

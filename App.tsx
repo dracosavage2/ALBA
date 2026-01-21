@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { ViewMode, Task, Transaction, FocusSession } from './types';
+import { ViewMode, Task, Transaction, FocusSession, ThemeColor } from './types';
 import Dashboard from './components/Dashboard';
 import AgendaView from './components/AgendaView';
 import FinanceView from './components/FinanceView';
@@ -39,6 +39,7 @@ async function decodeAudioData(data: Uint8Array, ctx: AudioContext, sampleRate: 
 
 const App: React.FC = () => {
   const [view, setView] = useState<ViewMode>('dashboard');
+  const [theme, setTheme] = useState<ThemeColor>('indigo');
   const [tasks, setTasks] = useState<Task[]>([]);
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [isVoiceActive, setIsVoiceActive] = useState(false);
@@ -80,9 +81,11 @@ const App: React.FC = () => {
     const savedTasks = localStorage.getItem('voz_tasks');
     const savedTx = localStorage.getItem('voz_tx');
     const savedNotified = localStorage.getItem('voz_notified');
+    const savedTheme = localStorage.getItem('voz_theme') as ThemeColor;
     
     if (savedTasks) setTasks(JSON.parse(savedTasks));
     if (savedTx) setTransactions(JSON.parse(savedTx));
+    if (savedTheme) setTheme(savedTheme);
     if (savedNotified) {
       const parsed = JSON.parse(savedNotified);
       setNotifiedTasks(parsed);
@@ -107,7 +110,8 @@ const App: React.FC = () => {
     localStorage.setItem('voz_tasks', JSON.stringify(tasks));
     localStorage.setItem('voz_tx', JSON.stringify(transactions));
     localStorage.setItem('voz_notified', JSON.stringify(notifiedTasks));
-  }, [tasks, transactions, notifiedTasks]);
+    localStorage.setItem('voz_theme', theme);
+  }, [tasks, transactions, notifiedTasks, theme]);
 
   const requestPermission = async () => {
     if ('Notification' in window) {
@@ -264,7 +268,7 @@ const App: React.FC = () => {
     <div className={`flex flex-col min-h-screen bg-slate-50 pb-24 lg:pb-0 lg:pl-64 ${focusSession.isActive ? 'overflow-hidden' : ''}`}>
       {!focusSession.isActive && (
         <>
-          <Header view={view} isMicActive={isWakeWordListening} />
+          <Header view={view} theme={theme} onThemeChange={setTheme} isMicActive={isWakeWordListening} />
           
           {!hasNotificationPermission && (
             <div className="bg-amber-100 p-3 mx-4 mt-4 rounded-xl flex items-center justify-between border border-amber-200">
@@ -274,28 +278,28 @@ const App: React.FC = () => {
           )}
 
           <main className="flex-1 p-4 max-w-4xl mx-auto w-full">
-            {view === 'dashboard' && <Dashboard tasks={tasks} transactions={transactions} onToggleTask={toggleTask} onDeleteTask={deleteTask} onStartFocus={(tid, dur) => setFocusSession({isActive: true, taskId: tid, durationMinutes: dur || 25})} />}
-            {view === 'agenda' && <AgendaView tasks={tasks} onAdd={addTask} onToggle={toggleTask} onDelete={deleteTask} />}
-            {view === 'finances' && <FinanceView transactions={transactions} onAdd={addTransaction} onDelete={(id) => setTransactions(prev => prev.filter(tx => tx.id !== id))} />}
+            {view === 'dashboard' && <Dashboard theme={theme} tasks={tasks} transactions={transactions} onToggleTask={toggleTask} onDeleteTask={deleteTask} onStartFocus={(tid, dur) => setFocusSession({isActive: true, taskId: tid, durationMinutes: dur || 25})} />}
+            {view === 'agenda' && <AgendaView theme={theme} tasks={tasks} onAdd={addTask} onToggle={toggleTask} onDelete={deleteTask} />}
+            {view === 'finances' && <FinanceView theme={theme} transactions={transactions} onAdd={addTransaction} onDelete={(id) => setTransactions(prev => prev.filter(tx => tx.id !== id))} />}
           </main>
-          <BottomNav currentView={view} setView={setView} />
+          <BottomNav theme={theme} currentView={view} setView={setView} />
         </>
       )}
-      {focusSession.isActive && <FocusMode session={focusSession} onEnd={(comp) => {
+      {focusSession.isActive && <FocusMode theme={theme} session={focusSession} onEnd={(comp) => {
         if (comp && focusSession.taskId) toggleTask(focusSession.taskId);
         setFocusSession({ isActive: false, durationMinutes: 25 });
         speakText("Foco encerrado.");
       }} />}
-      {activeAlerts.length > 0 && !focusSession.isActive && <AlarmOverlay alerts={activeAlerts} onDismiss={(id) => { setActiveAlerts(prev => prev.filter(t => t.id !== id)); markAsNotified(id); }} onComplete={toggleTask} />}
+      {activeAlerts.length > 0 && !focusSession.isActive && <AlarmOverlay theme={theme} alerts={activeAlerts} onDismiss={(id) => { setActiveAlerts(prev => prev.filter(t => t.id !== id)); markAsNotified(id); }} onComplete={toggleTask} />}
       {!focusSession.isActive && (
         <div className="fixed bottom-24 right-4 z-50 lg:bottom-8 lg:right-8">
-          <button onClick={() => setIsVoiceActive(true)} className={`w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all active:scale-90 relative ${isWakeWordListening ? 'bg-indigo-600' : 'bg-slate-400'}`}>
-            {isWakeWordListening && <div className="absolute inset-0 rounded-full bg-indigo-400 animate-ping opacity-30"></div>}
+          <button onClick={() => setIsVoiceActive(true)} className={`w-16 h-16 rounded-full shadow-2xl flex items-center justify-center transition-all active:scale-90 relative ${isWakeWordListening ? `bg-${theme}-600` : 'bg-slate-400'}`}>
+            {isWakeWordListening && <div className={`absolute inset-0 rounded-full bg-${theme}-400 animate-ping opacity-30`}></div>}
             <svg xmlns="http://www.w3.org/2000/svg" className="h-8 w-8 text-white relative z-10" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 11a7 7 0 01-7 7m0 0a7 7 0 01-7-7m7 7v4m0 0H8m4 0h4m-4-8a3 3 0 01-3-3V5a3 3 0 116 0v6a3 3 0 01-3 3z" /></svg>
           </button>
         </div>
       )}
-      {isVoiceActive && <VoiceAssistant onClose={() => setIsVoiceActive(false)} tasks={tasks} onAddTask={(t) => addTask(t, true)} onDeleteTask={deleteTask} onAddTransaction={(tx) => addTransaction(tx, true)} onNavigate={setView} onStartFocus={(tid, dur) => setFocusSession({isActive: true, taskId: tid, durationMinutes: dur || 25})} />}
+      {isVoiceActive && <VoiceAssistant theme={theme} onClose={() => setIsVoiceActive(false)} tasks={tasks} onAddTask={(t) => addTask(t, true)} onDeleteTask={deleteTask} onAddTransaction={(tx) => addTransaction(tx, true)} onNavigate={setView} onStartFocus={(tid, dur) => setFocusSession({isActive: true, taskId: tid, durationMinutes: dur || 25})} />}
     </div>
   );
 };

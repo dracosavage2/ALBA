@@ -1,6 +1,6 @@
 
 import React, { useState } from 'react';
-import { Task } from '../types';
+import { Task, ThemeColor } from '../types';
 import { formatLocalDate } from '../App';
 
 interface AgendaViewProps {
@@ -8,9 +8,10 @@ interface AgendaViewProps {
   onAdd: (task: Omit<Task, 'id'>) => void;
   onToggle: (id: string) => void;
   onDelete: (id: string) => void;
+  theme: ThemeColor;
 }
 
-const AgendaView: React.FC<AgendaViewProps> = ({ tasks, onAdd, onToggle, onDelete }) => {
+const AgendaView: React.FC<AgendaViewProps> = ({ tasks, onAdd, onToggle, onDelete, theme }) => {
   const [title, setTitle] = useState('');
   const [date, setDate] = useState(new Date().toLocaleDateString('en-CA')); // YYYY-MM-DD local
   const [time, setTime] = useState('');
@@ -21,7 +22,7 @@ const AgendaView: React.FC<AgendaViewProps> = ({ tasks, onAdd, onToggle, onDelet
     onAdd({ 
       title, 
       dueDate: date, 
-      dueTime: time || "08:00", // Default para 8h se vazio
+      dueTime: time || "08:00", 
       completed: false, 
       category: 'Geral' 
     });
@@ -38,7 +39,7 @@ const AgendaView: React.FC<AgendaViewProps> = ({ tasks, onAdd, onToggle, onDelet
             placeholder="O que precisa ser feito?"
             value={title}
             onChange={(e) => setTitle(e.target.value)}
-            className="w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500"
+            className={`w-full bg-slate-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-${theme}-500`}
             required
           />
           <div className="grid grid-cols-2 gap-3">
@@ -48,24 +49,24 @@ const AgendaView: React.FC<AgendaViewProps> = ({ tasks, onAdd, onToggle, onDelet
                 type="date"
                 value={date}
                 onChange={(e) => setDate(e.target.value)}
-                className="bg-slate-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"
+                className={`bg-slate-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-${theme}-500 font-bold text-slate-700`}
                 required
               />
             </div>
             <div className="flex flex-col space-y-1">
-              <label className="text-[10px] font-bold text-indigo-600 uppercase ml-1">Hora (Alerta)</label>
+              <label className={`text-[10px] font-bold text-${theme}-600 uppercase ml-1`}>Hora (Alerta)</label>
               <input 
                 type="time"
                 value={time}
                 onChange={(e) => setTime(e.target.value)}
-                className="bg-indigo-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-indigo-500 font-black text-indigo-700"
+                className={`bg-${theme}-50 border-none rounded-xl px-4 py-3 text-sm focus:ring-2 focus:ring-${theme}-500 font-black text-${theme}-700`}
                 required
               />
             </div>
           </div>
           <button 
             type="submit"
-            className="w-full px-6 py-4 bg-indigo-600 text-white font-bold rounded-xl text-sm shadow-md hover:bg-indigo-700 active:scale-95 transition-all"
+            className={`w-full px-6 py-4 bg-${theme}-600 text-white font-bold rounded-xl text-sm shadow-md hover:bg-${theme}-700 active:scale-95 transition-all uppercase tracking-widest`}
           >
             Adicionar à Agenda
           </button>
@@ -82,7 +83,7 @@ const AgendaView: React.FC<AgendaViewProps> = ({ tasks, onAdd, onToggle, onDelet
           <div key={task.id} className="group flex items-center space-x-4 p-4 bg-white rounded-2xl shadow-sm border border-slate-100 transition-all">
             <button 
               onClick={() => onToggle(task.id)}
-              className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${task.completed ? 'bg-indigo-600 border-indigo-600' : 'border-slate-300'}`}
+              className={`w-7 h-7 rounded-full border-2 flex items-center justify-center transition-colors ${task.completed ? `bg-${theme}-600 border-${theme}-600` : 'border-slate-300'}`}
             >
               {task.completed && <svg className="w-4 h-4 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M5 13l4 4L19 7"/></svg>}
             </button>
@@ -94,7 +95,7 @@ const AgendaView: React.FC<AgendaViewProps> = ({ tasks, onAdd, onToggle, onDelet
                 <span className="text-[10px] bg-slate-100 text-slate-500 px-2 py-0.5 rounded-full font-bold">
                   {formatLocalDate(task.dueDate)}
                 </span>
-                <span className={`flex items-center space-x-1.5 text-[11px] px-2.5 py-1 rounded-full font-black ring-1 ${task.dueTime ? 'bg-indigo-100 text-indigo-700 ring-indigo-200' : 'bg-slate-100 text-slate-400 ring-slate-200'}`}>
+                <span className={`flex items-center space-x-1.5 text-[11px] px-2.5 py-1 rounded-full font-black ring-1 ${task.dueTime ? `bg-${theme}-100 text-${theme}-700 ring-${theme}-200` : 'bg-slate-100 text-slate-400 ring-slate-200'}`}>
                     <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="3" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     <span>{task.dueTime || 'Sem hora'}</span>
                 </span>
@@ -108,11 +109,6 @@ const AgendaView: React.FC<AgendaViewProps> = ({ tasks, onAdd, onToggle, onDelet
             </button>
           </div>
         ))}
-        {tasks.length === 0 && (
-           <div className="text-center py-10 opacity-40">
-              <p className="text-sm">Nenhum compromisso agendado.</p>
-           </div>
-        )}
       </div>
     </div>
   );

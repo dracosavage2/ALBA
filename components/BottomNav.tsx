@@ -1,19 +1,20 @@
 
 import React from 'react';
-import { ViewMode } from '../types';
+import { ViewMode, ThemeColor } from '../types';
 
 interface BottomNavProps {
   currentView: ViewMode;
   setView: (v: ViewMode) => void;
+  theme: ThemeColor;
 }
 
-const BottomNav: React.FC<BottomNavProps> = ({ currentView, setView }) => {
+const BottomNav: React.FC<BottomNavProps> = ({ currentView, setView, theme }) => {
   const NavItem = ({ view, label, icon }: { view: ViewMode, label: string, icon: React.ReactNode }) => {
     const isActive = currentView === view;
     return (
       <button 
         onClick={() => setView(view)}
-        className={`flex flex-col items-center justify-center w-full py-3 transition-colors ${isActive ? 'text-indigo-600' : 'text-slate-400'}`}
+        className={`flex flex-col items-center justify-center w-full py-3 transition-colors ${isActive ? `text-${theme}-600` : 'text-slate-400'}`}
       >
         {icon}
         <span className="text-[10px] mt-1 font-medium">{label}</span>
@@ -24,7 +25,7 @@ const BottomNav: React.FC<BottomNavProps> = ({ currentView, setView }) => {
   return (
     <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 flex justify-around safe-bottom z-40 lg:w-64 lg:h-full lg:flex-col lg:border-r lg:border-t-0 lg:top-0">
       <div className="hidden lg:flex p-6 mb-8">
-         <h2 className="text-2xl font-black text-indigo-600 italic">VozAgenda</h2>
+         <h2 className={`text-2xl font-black text-${theme}-600 italic`}>VozAgenda</h2>
       </div>
       
       <div className="flex flex-row w-full lg:flex-col lg:space-y-4">
