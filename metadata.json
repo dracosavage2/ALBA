@@ -1,0 +1,8 @@
+{
+  "name": "VozAgenda - Financeiro & Tarefas",
+  "description": "Uma agenda inteligente que combina gestão de tarefas e finanças com comandos de voz avançados via Gemini Live API.",
+  "requestFramePermissions": [
+    "microphone"
+  ],
+  "notification": true
+}
